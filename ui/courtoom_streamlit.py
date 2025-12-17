@@ -276,7 +276,25 @@ with col2:
         type="primary",
         disabled=not system_ready,
         use_container_width=True
-    ):
+    ): 
+        case_id = f"CASE-{uuid.uuid4().hex[:6]}"
+        debate_id = f"DEBATE-{uuid.uuid4().hex[:6]}"
+        
+        conn = get_conn()
+        cur = conn.cursor()
+        
+        cur.execute("""
+        INSERT INTO cases (id, title, facts)
+        VALUES (?, ?, ?)
+        """, (case_id, "Traffic Court Case", case_text))
+        
+        cur.execute("""
+        INSERT INTO debates (id, case_id, started_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, (debate_id, case_id))
+        
+        conn.commit()
+        conn.close()
         with st.spinner("Court is in session..."):
             try:
                 # Create unique debate ID
@@ -469,6 +487,7 @@ with st.expander("🔧 Debug Information"):
     
     st.write("**System Path:**")
     st.write(sys.path[:5])  # First 5 paths
+
 
 
 
