@@ -2,11 +2,12 @@ import sqlite3
 import os
 import json
 
-DB_PATH = "database/courtroom.db"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "database", "courtroom.db")
 
 def get_conn():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def init_db():
     conn = get_conn()
@@ -104,3 +105,4 @@ def init_db():
 
     conn.commit()
     conn.close()
+
