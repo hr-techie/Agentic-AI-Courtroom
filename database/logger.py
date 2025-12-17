@@ -62,7 +62,7 @@ def log_judgement(debate_id, scores, verdict):
 # -------------------------
 # Memory persistence
 # -------------------------
-def log_memory(debate_id, key, value):
+def log_case_memory(debate_id, key, value):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -71,3 +71,4 @@ def log_memory(debate_id, key, value):
     )
     conn.commit()
     conn.close()
+
