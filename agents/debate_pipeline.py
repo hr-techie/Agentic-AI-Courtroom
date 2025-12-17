@@ -7,7 +7,8 @@ from models.pydantic_models import JudgementModel
 from database.logger import (
     start_debate,
     end_debate,
-    log_agent_turn
+    log_agent_turn,
+    log_case_memory
 )
 
 class DebatePipeline:
@@ -16,8 +17,10 @@ class DebatePipeline:
     Prosecutor → Defense → Judge
     """
 
-    def __init__(self, llm, debate_id: str):
+    def __init__(self, llm, case_text: str, case_id: str, debate_id: str):
         self.debate_id = debate_id
+        self.case_text = case_text
+        self.case_id = case_id
         self.llm = llm
 
         # Shared memory across agents
@@ -56,7 +59,7 @@ class DebatePipeline:
         """
         Runs debate and returns validated JudgementModel
         """
-        start_debate(self.debate_id, case_id="AUTO-CASE")
+        start_debate(self.debate_id, case_id=self.case_id)
 
         # Store case in memory
         self.memory.set_case(case_facts)
@@ -72,12 +75,17 @@ class DebatePipeline:
                 evidence_list=self.evidence_list,
                 memory=self.memory
             )
-
+            log_agent_turn(self.debate_id, "prosecutor", prosecutor_text)
             self.memory.add_turn("prosecutor", prosecutor_text)
             self.hearing_log.append({
                 "agent": "prosecutor",
                 "text": prosecutor_text
             })
+            log_case_memory(
+                debate_id=self.debate_id,
+                key="prosecutor_argument",
+                value=prosecutor_text
+            )
 
             # Defense turn
             defense_text = self.defense.generate_argument(
@@ -85,12 +93,18 @@ class DebatePipeline:
                 evidence_list=self.evidence_list,
                 memory=self.memory
             )
-
+            log_agent_turn(self.debate_id, "defense", defense_text)
             self.memory.add_turn("defense", defense_text)
             self.hearing_log.append({
                 "agent": "defense",
                 "text": defense_text
             })
+            log_case_memory(
+                debate_id=self.debate_id,
+                key="defense_argument",
+                value=defense_text
+            )
+
 
         # Judge evaluation
         judgement = self.judge.evaluate(
@@ -101,7 +115,13 @@ class DebatePipeline:
             evidence_list=self.evidence_list,
             hearing_log=self.hearing_log
         )
+        log_case_memory(
+            debate_id=self.debate_id,
+            key="judgement",
+            value=judgement.json()
+        )
 
+        end_debate(self.debate_id)
         return judgement
 
     # ----------------------------------
@@ -109,3 +129,4 @@ class DebatePipeline:
     # ----------------------------------
     def run_and_get_dict(self, case_facts: str, rounds: int = 1) -> dict:
         return self.run(case_facts, rounds).dict()
+
